@@ -11,6 +11,39 @@ from flask_marshmallow import Marshmallow
 #initial app
 app = Flask(__name__)
 
+#Database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///frontEndCache.sqlite'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+#init database
+db = SQLAlchemy(app)
+
+#init marshmallow
+ma = Marshmallow(app)
+
+#catalog Class/Model
+class Catalog(db.Model):
+    id = db.Column(db.Integer,primary_key=True)
+    title = db.Column(db.String(200))
+    quantity = db.Column(db.Integer)
+    price = db.Column(db.Float)
+    topic = db.Column(db.String(200))
+     
+
+    def __init__(self,id,title,quantity,price,topic):
+        self.id=id
+        self.title=title
+        self.quantity=quantity
+        self.price=price
+        self.topic=topic
+#Catalog schema
+class CatalogSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'title' , 'quantity' , 'price' , 'topic')
+
+#init schema
+book_schema = CatalogSchema()
+
 #request to get all of the books information # it is sent to the catalog server
 @app.route('/bazar/info/all', methods=['GET'])
 def info():
