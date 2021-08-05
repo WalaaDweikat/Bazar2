@@ -43,28 +43,43 @@ class CatalogSchema(ma.Schema):
 
 #init schema
 book_schema = CatalogSchema()
+books_schema = CatalogSchema(many=True)
+
 
 #request to get all of the books information # it is sent to the catalog server
+#it is impossible for the cache to contain all of the books inside the catalog database
 @app.route('/bazar/info/all', methods=['GET'])
 def info():
   r = requests.get("http://192.168.1.202:5000/bazar/info/all")
   return (r.content)
 
+
 #request to catalog to get info about book with the id book_id
+#the front end server at first should check the cache if it contains the required book 
 @app.route('/bazar/info/<int:book_id>', methods=['GET'])
 def get_info(book_id):
-  book_id = book_id
-  #this is the request to be sent to the catalog server
-  r = requests.get("http://192.168.1.202:5000/bazar/info/"+str(book_id))
-  return (r.content)
+  #check the cache at first 
+  book = Catalog.query.with_entities(Catalog.title,Catalog.quantity,Catalog.topic,Catalog.price).filter_by(id = book_id).first()
+  if book: return book_schema.jsonify(book)
+  #this is the request to be sent to the catalog server if the required book is not in the cache
+  else :   
+    r = requests.get("http://192.168.1.202:5000/bazar/info/"+str(book_id))
+    return (r.content)
+
 
 #getting the books info which have the topic s_topic #request to catalogServer
+#should check the cache if it contains the book
 @app.route('/bazar/search/<s_topic>', methods=['GET'])
 def search(s_topic):
-  s_topic = s_topic
-  #this is the request to be sent to the catalogServer
-  r = requests.get("http://192.168.1.202:5000/bazar/search/"+str(s_topic))
-  return (r.content)
+  #check the cache 
+    books = Catalog.query.with_entities(Catalog.id,Catalog.title).filter_by(topic=s_topic.replace("%20"," ")).all()
+    if books :
+        result =jsonify(books_schema.dump(books))
+        return result
+    #this is the request to be sent to the catalogServer
+    else:
+       r = requests.get("http://192.168.1.202:5000/bazar/search/"+str(s_topic))
+       return (r.content)
 
 #purchase to order server, there is a parameter called amount can be send with the request body to 
 #specify how many books to purchase it will 1 by default if there is no body sent with the request 
